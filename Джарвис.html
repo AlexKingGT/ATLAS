@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>J.A.R.V.I.S. - Offline Voice Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        .command-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(74, 222, 128, 0.2);
+        }
+        #waveform {
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+            height: 40px;
+        }
+        .wave-bar {
+            width: 4px;
+            height: 10px;
+            margin: 0 2px;
+            background-color: #3b82f6;
+            border-radius: 2px;
+            transition: height 0.2s ease-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header Section -->
+        <header class="mb-10 text-center">
+            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/c57105ff-a993-4e84-820f-fd4832254aec.png" alt="3D rendered holographic robot face in blue and gold tones, futuristic AI assistant interface" 
+                class="mx-auto rounded-full border-4 border-blue-500/50 shadow-lg shadow-blue-500/20">
+            <h1 class="text-4xl font-bold mt-6 bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+                J.A.R.V.I.S. Assistant
+            </h1>
+            <p class="text-gray-400 mt-2">Just A Rather Very Intelligent System</p>
+            <div class="mt-4 flex justify-center items-center space-x-4">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                    <span class="text-sm text-gray-400">Status: <span id="statusText">Ready</span></span>
+                </div>
+                <div id="cpu-usage" class="text-sm text-gray-400">
+                    CPU: <span id="cpuPercent">0.7</span>% | RAM: <span id="ramUsage">143</span>MB
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Command Interface -->
+            <div class="lg:col-span-2">
+                <div class="bg-gray-800/70 rounded-xl border border-gray-700 p-6 shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">Voice Control</h2>
+                    <div class="space-y-6">
+                        <!-- Microphone Button -->
+                        <button id="micButton" class="w-full py-3 px-6 rounded-lg bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                            </svg>
+                            <span id="micButtonText">Start Listening</span>
+                        </button>
+
+                        <!-- Waveform Visualization -->
+                        <div id="waveform" class="hidden">
+                            <div class="wave-bar" id="bar1"></div>
+                            <div class="wave-bar" id="bar2"></div>
+                            <div class="wave-bar" id="bar3"></div>
+                            <div class="wave-bar" id="bar4"></div>
+                            <div class="wave-bar" id="bar5"></div>
+                        </div>
+
+                        <!-- Command Input/Output -->
+                        <div class="bg-gray-900/50 rounded-lg p-4 min-h-40">
+                            <div id="commandTranscript" class="text-gray-300">
+                                <p class="text-sm text-gray-500 italic">Your commands will appear here...</p>
+                            </div>
+                        </div>
+
+                        <!-- Current Action -->
+                        <div id="currentAction" class="hidden py-3 px-4 bg-gray-700/50 rounded-lg text-blue-300 text-sm flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span id="actionText">Processing command...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Custom Commands Configuration -->
+                <div class="mt-8 bg-gray-800/70 rounded-xl border border-gray-700 p-6 shadow-lg">
+                    <h2 class="text-xl font-semibold mb-4">Command Configuration</h2>
+                    <div class="space-y-4">
+                        <div>
+                            <label for="commandTrigger" class="block text-sm font-medium text-gray-400 mb-1">Command Phrase</label>
+                            <input type="text" id="commandTrigger" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label for="commandAction" class="block text-sm font-medium text-gray-400 mb-1">System Response</label>
+                            <textarea id="commandAction" rows="3" class="w-full bg-gray-900/50 border border-gray-700 rounded-lg px-4 py-2 text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                        </div>
+                        <button id="addCommandBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 px-4 rounded-lg flex items-center transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+                            </svg>
+                            Add Custom Command
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Commands List -->
+            <div>
+                <div class="bg-gray-800/70 rounded-xl border border-gray-700 p-6 shadow-lg h-full">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-semibold">Available Commands</h2>
+                        <span class="text-xs bg-gray-700 px-2 py-1 rounded-full" id="commandsCount">0 commands</span>
+                    </div>
+                    <div id="commandsList" class="space-y-3">
+                        <p class="text-gray-500 text-sm">No commands configured yet. Add some using the panel.</p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-gray-700">
+                        <h3 class="text-sm font-medium text-gray-400 mb-2">Quick Settings</h3>
+                        <div class="space-y-2">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="autoListen" class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-300">Auto-listen on wake word</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="voiceFeedback" checked class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-300">Voice feedback</span>
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="offlineMode" class="rounded bg-gray-700 border-gray-600 text-blue-500 focus:ring-blue-500">
+                                <span class="ml-2 text-sm text-gray-300">Force offline mode</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Service Worker Status -->
+        <div class="mt-10 border-t border-gray-800 pt-6 text-center">
+            <p class="text-xs text-gray-500">
+                <span id="swStatus">Service Worker: Not registered</span> | 
+                Version: <span id="appVersion">1.0.0</span>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
+            const micButton = document.getElementById('micButton');
+            const micButtonText = document.getElementById('micButtonText');
+            const waveform = document.getElementById('waveform');
+            const commandTranscript = document.getElementById('commandTranscript');
+            const currentAction = document.getElementById('currentAction');
+            const actionText = document.getElementById('actionText');
+            const statusText = document.getElementById('statusText');
+            const cpuPercent = document.getElementById('cpuPercent');
+            const ramUsage = document.getElementById('ramUsage');
+            const commandsList = document.getElementById('commandsList');
+            const commandsCount = document.getElementById('commandsCount');
+            const commandTrigger = document.getElementById('commandTrigger');
+            const commandAction = document.getElementById('commandAction');
+            const addCommandBtn = document.getElementById('addCommandBtn');
+            const autoListen = document.getElementById('autoListen');
+            const voiceFeedback = document.getElementById('voiceFeedback');
+            const offlineMode = document.getElementById('offlineMode');
+            const swStatus = document.getElementById('swStatus');
+
+            // State Variables
+            let isListening = false;
+            let recognition;
+            let commands = JSON.parse(localStorage.getItem('jarvis-commands') || '[]');
+            const defaultCommands = [
+                { 
+                    trigger: 'hello jarvis', 
+                    response: 'Hello sir, how may I assist you today?',
+                    type: 'default' 
+                },
+                { 
+                    trigger: 'what time is it', 
+                    response: `The current time is ${getCurrentTime()}`,
+                    type: 'default' 
+                },
+                { 
+                    trigger: 'what can you do', 
+                    response: 'I can perform tasks based on your voice commands. Try asking me about the time, or configure custom commands in the settings panel.',
+                    type: 'default' 
+                },
+                { 
+                    trigger: 'go offline', 
+                    response: 'Switching to offline mode. Some features may be limited.',
+                    type: 'default',
+                    action: () => { 
+                        offlineMode.checked = true;
+                        showSystemResponse('Offline mode activated');
+                    }
+                }
+            ];
+
+            // Initialize
+            initSpeechRecognition();
+            updateStats();
+            renderCommandsList();
+            registerServiceWorker();
+
+            // System functions
+            function getCurrentTime() {
+                const now = new Date();
+                return now.toLocaleTimeString();
+            }
+
+            function updateStats() {
+                // Simulate system stats
+                cpuPercent.textContent = (Math.random() * 8 + 2).toFixed(1);
+                ramUsage.textContent = Math.floor(Math.random() * 100 + 120);
+                setTimeout(updateStats, 5000);
+            }
+
+            function showSystemResponse(response, fromVoice = false) {
+                const responseElement = document.createElement('div');
+                responseElement.className = 'flex mb-3 mt-4';
+                responseElement.innerHTML = `
+                    <div class="flex-shrink-0 mr-3">
+                        <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/22acee38-b76c-4d56-a650-a996b53d821c.png" alt="3D rendered circular avatar of AI assistant with blue glowing accents" class="w-8 h-8 rounded-full border border-blue-500/40">
+                    </div>
+                    <div class="bg-blue-900/40 rounded-lg p-3 max-w-[85%]">
+                        <p class="text-sm text-blue-100">${response}</p>
+                    </div>
+                `;
+
+                commandTranscript.appendChild(responseElement);
+                commandTranscript.scrollTop = commandTranscript.scrollHeight;
+
+                // Speak the response if enabled and not from voice
+                if (voiceFeedback.checked && !fromVoice) {
+                    speak(response);
+                }
+            }
+
+            function speak(text) {
+                if ('speechSynthesis' in window) {
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.pitch = 0.9;
+                    utterance.rate = 1;
+                    
+                    // Try to find a male voice for Jarvis
+                    const voices = window.speechSynthesis.getVoices();
+                    const preferredVoices = voices.filter(v => v.name.includes('Google UK') || v.name.includes('Microsoft David'));
+                    utterance.voice = preferredVoices.length > 0 ? preferredVoices[0] : voices[0];
+                    
+                    speechSynthesis.speak(utterance);
+
+                    utterance.onend = () => {
+                        setStatus('Ready');
+                    };
+                }
+            }
+
+            function setStatus(status) {
+                statusText.textContent = status;
+                if (status === 'Listening...') {
+                    document.querySelector('header .bg-green-500').classList.add('pulse-animation');
+                    micButton.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    micButton.classList.add('bg-red-600', 'hover:bg-red-700');
+                    micButtonText.textContent = 'Stop Listening';
+                } else {
+                    document.querySelector('header .bg-green-500').classList.remove('pulse-animation');
+                    micButton.classList.remove('bg-red-600', 'hover:bg-red-700');
+                    micButton.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    micButtonText.textContent = 'Start Listening';
+                }
+            }
+
+            function processCommand(command) {
+                const transcriptDiv = document.createElement('div');
+                transcriptDiv.className = 'flex justify-end mb-3';
+                transcriptDiv.innerHTML = `
+                    <div class="bg-gray-700/70 rounded-lg p-3 max-w-[85%]">
+                        <p class="text-sm text-gray-100">${command}</p>
+                    </div>
+                    <div class="flex-shrink-0 ml-3">
+                        <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/013d4fa8-7cb0-4967-b190-2fd555fd3540.png" alt="Circular avatar placeholder for user with neutral background" class="w-8 h-8 rounded-full border border-gray-600/40">
+                    </div>
+                `;
+                commandTranscript.appendChild(transcriptDiv);
+
+                // Show processing state
+                currentAction.classList.remove('hidden');
+                actionText.textContent = `Processing: "${command}"`;
+                setStatus('Processing...');
+                commandTranscript.scrollTop = commandTranscript.scrollHeight;
+
+                // Check commands
+                const allCommands = [...defaultCommands, ...commands];
+                const matchedCommand = allCommands.find(cmd => 
+                    command.toLowerCase().includes(cmd.trigger.toLowerCase())
+                );
+
+                setTimeout(() => {
+                    currentAction.classList.add('hidden');
+                    
+                    if (matchedCommand) {
+                        if (matchedCommand.action) {
+                            matchedCommand.action();
+                        } else {
+                            showSystemResponse(matchedCommand.response);
+                        }
+                    } else {
+                        showSystemResponse("I didn't understand that command. Please try again or add it to the custom commands.");
+                    }
+                }, 1000);
+            }
+
+            // Speech Recognition
+            function initSpeechRecognition() {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    setStatus('Listening...');
+                    waveform.classList.remove('hidden');
+                };
+
+                recognition.onend = () => {
+                    isListening = false;
+                    waveform.classList.add('hidden');
+                    if (micButton.textContent.includes('Stop')) {
+                        setStatus('Ready');
+                    }
+                };
+
+                recognition.onresult = (event) => {
+                    const transcript = Array.from(event.results)
+                        .map(result => result[0])
+                        .map(result => result.transcript)
+                        .join('');
+
+                    // Process the final transcript
+                    if (event.results[0].isFinal) {
+                        processCommand(transcript);
+                    }
+
+                    // Visual feedback
+                    updateWaveform();
+                };
+
+                recognition.onerror = (event) => {
+                    console.error('Recognition error:', event.error);
+                    setStatus('Error: ' + event.error);
+                    waveform.classList.add('hidden');
+                    showSystemResponse(`Recognition error: ${event.error}`);
+                };
+            }
+
+            function updateWaveform() {
+                // Simple waveform animation
+                const bars = ['bar1', 'bar2', 'bar3', 'bar4', 'bar5'];
+                bars.forEach((bar, i) => {
+                    const height = Math.floor(Math.random() * 20) + 5;
+                    document.getElementById(bar).style.height = `${height}px`;
+                    document.getElementById(bar).style.opacity = (height / 25).toFixed(1);
+                });
+            }
+
+            // Commands Management
+            function renderCommandsList() {
+                if (commands.length === 0 && commandsList.children.length === 1) return;
+
+                commandsList.innerHTML = '';
+                const allCommands = [...defaultCommands, ...commands];
+
+                if (allCommands.length === 0) {
+                    commandsList.innerHTML = '<p class="text-gray-500 text-sm">No commands configured yet. Add some using the panel.</p>';
+                    commandsCount.textContent = '0 commands';
+                    return;
+                }
+
+                allCommands.forEach((cmd, index) => {
+                    const commandEl = document.createElement('div');
+                    commandEl.className = 'command-card bg-gray-900/40 hover:bg-gray-900/60 rounded-lg p-3 border border-gray-700 transition-all cursor-pointer';
+                    commandEl.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="font-medium text-gray-200 truncate">"${cmd.trigger}"</h3>
+                                <p class="text-xs text-gray-400 mt-1 truncate">${cmd.response}</p>
+                            </div>
+                            ${cmd.type === 'default' ? 
+                                `<span class="text-xs bg-blue-900/50 text-blue-300 px-2 py-0.5 rounded-full">System</span>` : 
+                                `<button class="text-xs bg-red-900/50 text-red-300 px-2 py-0.5 rounded-full delete-command" data-index="${index - defaultCommands.length}">Delete</button>`}
+                        </div>
+                    `;
+                    commandsList.appendChild(commandEl);
+                });
+
+                commandsCount.textContent = `${allCommands.length} command${allCommands.length !== 1 ? 's' : ''}`;
+                
+                // Add event listeners for delete buttons
+                document.querySelectorAll('.delete-command').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        deleteCommand(parseInt(btn.dataset.index));
+                    });
+                });
+            }
+
+            function addCommand(trigger, response) {
+                if (!trigger.trim() || !response.trim()) return;
+
+                commands.push({
+                    trigger: trigger.trim(),
+                    response: response.trim(),
+                    type: 'custom'
+                });
+
+                localStorage.setItem('jarvis-commands', JSON.stringify(commands));
+                renderCommandsList();
+                commandTrigger.value = '';
+                commandAction.value = '';
+                showSystemResponse(`Added new command: "${trigger}"`);
+            }
+
+            function deleteCommand(index) {
+                if (index >= 0 && index < commands.length) {
+                    const deleted = commands.splice(index, 1);
+                    localStorage.setItem('jarvis-commands', JSON.stringify(commands));
+                    renderCommandsList();
+                    showSystemResponse(`Deleted command: "${deleted[0].trigger}"`);
+                }
+            }
+
+            // Service Worker for offline functionality
+            function registerServiceWorker() {
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('sw.js')
+                        .then(registration => {
+                            console.log('ServiceWorker registered');
+                            swStatus.textContent = 'Service Worker: Active';
+                        })
+                        .catch(error => {
+                            console.log('ServiceWorker registration failed:', error);
+                            swStatus.textContent = 'Service Worker: Failed';
+                        });
+                }
+            }
+
+            // Event Listeners
+            micButton.addEventListener('click', () => {
+                if (isListening) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+            });
+
+            addCommandBtn.addEventListener('click', () => {
+                addCommand(commandTrigger.value, commandAction.value);
+            });
+        });
+    </script>
+</body>
+</html>
+
